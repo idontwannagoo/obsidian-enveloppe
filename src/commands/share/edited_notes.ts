@@ -2,6 +2,7 @@ import type { MonoRepoProperties, Repository } from "@interfaces";
 import i18next from "i18next";
 import { type Command, Notice, type TFile } from "obsidian";
 import type { GithubBranch } from "src/GitHub/branch";
+import { publishDirectFiles, useDirectPublish } from "src/GitHub/direct_publish";
 import type Enveloppe from "src/main";
 import { checkRepositoryValidityWithProperties } from "src/utils/data_validation_test";
 import {
@@ -70,6 +71,14 @@ async function shareAllEditedNotes(
 	monoRepo: MonoRepoProperties
 ) {
 	const plugin = PublisherManager.plugin;
+	if (useDirectPublish(plugin)) {
+		await publishDirectFiles(
+			PublisherManager,
+			PublisherManager.getSharedFiles(monoRepo.repository),
+			monoRepo.repository
+		);
+		return;
+	}
 	new Notice(i18next.t("informations.scanningRepo"), PublisherManager.noticeLength);
 	const sharedFilesWithPaths = PublisherManager.getAllFileWithPath(
 		monoRepo.repository,
@@ -126,6 +135,15 @@ async function shareOnlyEdited(
 	branchName: string,
 	monoRepo: MonoRepoProperties
 ) {
+	if (useDirectPublish(PublisherManager.plugin)) {
+		await publishDirectFiles(
+			PublisherManager,
+			PublisherManager.getSharedFiles(monoRepo.repository),
+			monoRepo.repository,
+			{ selection: "edited" }
+		);
+		return;
+	}
 	const shortRepo = monoRepo.repository;
 	const prop = monoRepo.frontmatter;
 	new Notice(i18next.t("informations.scanningRepo"), PublisherManager.noticeLength);

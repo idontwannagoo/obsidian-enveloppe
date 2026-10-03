@@ -426,9 +426,12 @@ class ModalEditingRepository extends Modal {
 		new Setting(contentEl)
 			.setName(i18next.t("settings.github.automaticallyMergePR"))
 			.addToggle((toggle) =>
-				toggle.setValue(this.repository.automaticallyMergePR).onChange(async (value) => {
-					this.repository.automaticallyMergePR = value;
-				})
+				toggle
+					.setValue(this.repository.automaticallyMergePR)
+					.setDisabled(this.plugin.settings.github.directPublish ?? false)
+					.onChange(async (value) => {
+						this.repository.automaticallyMergePR = value;
+					})
 			);
 		new Setting(contentEl).setClass("no-display").addButton((button) =>
 			button

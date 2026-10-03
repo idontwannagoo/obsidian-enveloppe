@@ -7,6 +7,7 @@
 	"scripts": {
 		"lint": "biome format --write src/",
 		"prebuild": "tsc --noEmit --skipLibCheck",
+		"test": "bun test --preload ./tests/preload.ts ./tests",
 		"build": "node esbuild.config.mjs --production",
 		"dev:prod": "node esbuild.config.mjs --vault",
 		"dev": "node esbuild.config.mjs",
@@ -33,6 +34,7 @@
 		"@codemirror/view": "^6.41.0",
 		"@enveloppe/obsidian-dataview": "^0.5.70-2",
 		"@octokit/core": "^7.0.6",
+		"@types/bun": "^1.4.2",
 		"@types/luxon": "^3.7.1",
 		"@types/node": "^25.5.2",
 		"ansi-colors": "^4.1.3",

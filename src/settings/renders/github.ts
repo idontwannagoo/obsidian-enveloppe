@@ -106,12 +106,26 @@ export const renderGithubConfiguration = (ctx: RenderContext) => {
 		);
 
 	new Setting(ctx.settingsPage)
+		.setName(i18next.t("settings.github.directPublish.title"))
+		.setDesc(i18next.t("settings.github.directPublish.desc"))
+		.addToggle((toggle) =>
+			toggle.setValue(githubSettings.directPublish ?? false).onChange(async (value) => {
+				githubSettings.directPublish = value;
+				await ctx.plugin.saveSettings();
+				await ctx.renderSettingsPage(ESettingsTabId.Github);
+			})
+		);
+
+	new Setting(ctx.settingsPage)
 		.setName(i18next.t("settings.github.automaticallyMergePR"))
 		.addToggle((toggle) =>
-			toggle.setValue(githubSettings.automaticallyMergePR).onChange(async (value) => {
-				githubSettings.automaticallyMergePR = value;
-				await ctx.plugin.saveSettings();
-			})
+			toggle
+				.setValue(githubSettings.automaticallyMergePR)
+				.setDisabled(githubSettings.directPublish ?? false)
+				.onChange(async (value) => {
+					githubSettings.automaticallyMergePR = value;
+					await ctx.plugin.saveSettings();
+				})
 		);
 
 	new Setting(ctx.settingsPage)

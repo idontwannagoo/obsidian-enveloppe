@@ -10,6 +10,7 @@ import {
 } from "obsidian";
 import type { GithubBranch } from "src/GitHub/branch";
 import { deleteFromGithub } from "src/GitHub/delete";
+import { publishDirectFiles, useDirectPublish } from "src/GitHub/direct_publish";
 import type Enveloppe from "src/main";
 import { ListChangedFiles } from "src/settings/modals/list_changed";
 import { createListEdited, getSettingsOfMetadataExtractor } from "src/utils";
@@ -98,6 +99,12 @@ export async function shareAllMarkedNotes(
 	createGithubBranch: boolean = true,
 	sourceFrontmatter: FrontMatterCache | undefined | null = null
 ) {
+	if (useDirectPublish(PublisherManager.plugin)) {
+		return publishDirectFiles(PublisherManager, sharedFiles, monoRepo.repository, {
+			sourceFrontmatter,
+			statusElement: statusBarItems,
+		});
+	}
 	const statusBar = new ShareStatusBar(
 		statusBarItems,
 		sharedFiles.length,

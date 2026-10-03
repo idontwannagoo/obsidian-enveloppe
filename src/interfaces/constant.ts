@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: Partial<EnveloppeSettings> = {
 		repo: "",
 		branch: "main",
 		automaticallyMergePR: true,
+		directPublish: false,
 		dryRun: {
 			enable: false,
 			folderName: "enveloppe",

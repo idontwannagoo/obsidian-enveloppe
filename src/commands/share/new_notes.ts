@@ -2,6 +2,7 @@ import type { MonoRepoProperties, Repository } from "@interfaces";
 import i18next from "i18next";
 import { type Command, Notice } from "obsidian";
 import type { GithubBranch } from "src/GitHub/branch";
+import { publishDirectFiles, useDirectPublish } from "src/GitHub/direct_publish";
 import { shareAllMarkedNotes } from "src/commands";
 import type Enveloppe from "src/main";
 import { checkRepositoryValidityWithProperties } from "src/utils/data_validation_test";
@@ -71,6 +72,15 @@ export async function shareNewNote(
 	monoRepo: MonoRepoProperties
 ): Promise<void | boolean> {
 	const plugin = PublisherManager.plugin;
+	if (useDirectPublish(plugin)) {
+		await publishDirectFiles(
+			PublisherManager,
+			PublisherManager.getSharedFiles(monoRepo.repository),
+			monoRepo.repository,
+			{ selection: "new" }
+		);
+		return;
+	}
 	new Notice(i18next.t("informations.scanningRepo"), PublisherManager.noticeLength);
 	const sharedFilesWithPaths = PublisherManager.getAllFileWithPath(
 		monoRepo.repository,

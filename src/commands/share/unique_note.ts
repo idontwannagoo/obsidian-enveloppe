@@ -8,6 +8,7 @@ import {
 	type TFile,
 } from "obsidian";
 import type { GithubBranch } from "src/GitHub/branch";
+import { publishDirectFiles, useDirectPublish } from "src/GitHub/direct_publish";
 import type Enveloppe from "src/main";
 import { ListChangedFiles } from "src/settings/modals/list_changed";
 import { createLink, createListEdited, getSettingsOfMetadataExtractor } from "src/utils";
@@ -71,6 +72,25 @@ export async function shareOneNote(
 	sourceFrontmatter: FrontMatterCache | undefined | null,
 	title?: string
 ): Promise<void | false> {
+	if (useDirectPublish(PublisherManager.plugin)) {
+		const report = await publishDirectFiles(PublisherManager, [file], repository, {
+			deepScan: true,
+			sourceFrontmatter,
+		});
+		if (report?.results.some((result) => result.commit)) {
+			const properties = getProperties(
+				PublisherManager.plugin,
+				repository,
+				frontmatterFromFile(file, PublisherManager.plugin, repository)
+			);
+			await createLink(
+				file,
+				{ frontmatter: properties, repository },
+				PublisherManager.plugin
+			);
+		}
+		return;
+	}
 	const { settings, plugin } = PublisherManager;
 	const app = PublisherManager.plugin.app;
 	plugin.console.noticeMobile(

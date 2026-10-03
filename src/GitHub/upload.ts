@@ -13,7 +13,6 @@ import type { Octokit } from "@octokit/core";
 import i18next from "i18next";
 import { Base64 } from "js-base64";
 import {
-	arrayBufferToBase64,
 	type FrontMatterCache,
 	type MetadataCache,
 	Notice,
@@ -24,7 +23,7 @@ import {
 	type Vault,
 } from "obsidian";
 import { mainConverting } from "src/conversion";
-import { convertToHTMLSVG } from "src/conversion/compiler/excalidraw";
+import { prepareAttachment } from "src/conversion/attachment";
 import { getImagePath, getReceiptFolder } from "src/conversion/file_path";
 import { deleteFromGithub } from "src/GitHub/delete";
 import { FilesManagement } from "src/GitHub/files";
@@ -159,6 +158,68 @@ export default class Publisher {
 		};
 	}
 
+	/** 只准备最终上传内容，不发起 GitHub 请求。 */
+	async preparePublication(
+		file: TFile,
+		repo: MultiRepoProperties | MonoRepoProperties,
+		sourceFrontmatter: FrontMatterCache | null | undefined,
+		target?: Properties
+	) {
+		const shareFiles = new FilesManagement(this.octokit, this.plugin);
+		const frontmatter = mergeFrontmatter(
+			frontmatterFromFile(file, this.plugin, null),
+			sourceFrontmatter,
+			this.settings.plugin.shareKey
+		);
+		const prop = target ?? getProperties(this.plugin, repo.repository, frontmatter);
+		// 直提路径已经加载对应仓库的认证信息，网络请求会直接报告认证错误。
+		const isNotEmpty = target
+			? Boolean(target.owner && target.repo && target.branch)
+			: await checkEmptyConfiguration(prop, this.plugin);
+
+		if (!isNotEmpty) return null;
+		const frontmatterSettingsFromFile = getFrontmatterSettings(
+			frontmatter,
+			this.settings,
+			repo.repository
+		);
+
+		const frontmatterRepository = frontmatterSettingsRepository(
+			this.plugin,
+			repo.repository
+		);
+		const frontmatterSettings = merge.withOptions(
+			{ allowUndefinedOverrides: false },
+			frontmatterRepository,
+			frontmatterSettingsFromFile
+		);
+		const multiProperties: MultiProperties = {
+			plugin: this.plugin,
+			frontmatter: {
+				general: frontmatterSettings,
+				prop,
+			},
+			repository: repo.repository,
+			filepath: getReceiptFolder(file, repo.repository, this.plugin, prop),
+		};
+
+		let embedFiles = shareFiles.getSharedEmbed(file, frontmatterSettings);
+		embedFiles = await shareFiles.getMetadataLinks(file, embedFiles, frontmatterSettings);
+		const linkedFiles = shareFiles.getLinkedByEmbedding(file);
+		let text = await this.vault.cachedRead(file);
+		text = await mainConverting(text, file, frontmatter, linkedFiles, multiProperties);
+		const path = multiProperties.filepath;
+		const props = Array.isArray(prop) ? prop : [prop];
+		return {
+			text,
+			path,
+			props,
+			embedFiles,
+			general: frontmatterSettings,
+			multiProperties,
+		};
+	}
+
 	/**
 	 * Main prog to scan notes, their embed files and send it to GitHub.
 	 * @param {TFile} file Origin file
@@ -191,62 +252,28 @@ export default class Publisher {
 		) {
 			const msg = i18next.t("publish.upToDate", {
 				file: file.name,
-				repo: `${repo.repository?.user ?? this.settings.github.user}/${repo.repository?.repo ?? this.settings.github.repo
-					}:${repo.repository?.branch ?? this.branchName}`,
+				repo: `${repo.repository?.user ?? this.settings.github.user}/${
+					repo.repository?.repo ?? this.settings.github.repo
+				}:${repo.repository?.branch ?? this.branchName}`,
 			});
 			new Notice(msg, this.noticeLength);
 			return false;
 		}
-		frontmatter = mergeFrontmatter(
-			frontmatter,
-			sourceFrontmatter,
-			this.settings.plugin.shareKey
-		);
-		const prop = getProperties(this.plugin, repo.repository, frontmatter);
-		const isNotEmpty = await checkEmptyConfiguration(prop, this.plugin);
-		repo.frontmatter = prop;
-
-		if (
-			fileHistory.includes(file) ||
-			!checkIfRepoIsInAnother(prop, repo.frontmatter) ||
-			!isNotEmpty
-		) {
-			return false;
-		}
+		if (fileHistory.includes(file)) return false;
+		const prepared = await this.preparePublication(file, repo, sourceFrontmatter);
+		if (!prepared) return false;
+		repo.frontmatter = prepared.multiProperties.frontmatter.prop;
+		if (!checkIfRepoIsInAnother(prepared.props, repo.frontmatter)) return false;
 		this.console.trace(`Publishing file: ${file.path}`);
 		fileHistory.push(file);
-		const frontmatterSettingsFromFile = getFrontmatterSettings(
-			frontmatter,
-			this.settings,
-			repo.repository
-		);
-
-		const frontmatterRepository = frontmatterSettingsRepository(
-			this.plugin,
-			repo.repository
-		);
-		const frontmatterSettings = merge.withOptions(
-			{ allowUndefinedOverrides: false },
-			frontmatterRepository,
-			frontmatterSettingsFromFile
-		);
-		const multiProperties: MultiProperties = {
-			plugin: this.plugin,
-			frontmatter: {
-				general: frontmatterSettings,
-				prop: repo.frontmatter,
-			},
-			repository: repo.repository,
-			filepath: filePath,
-		};
-
-		let embedFiles = shareFiles.getSharedEmbed(file, frontmatterSettings);
-		embedFiles = await shareFiles.getMetadataLinks(file, embedFiles, frontmatterSettings);
-		const linkedFiles = shareFiles.getLinkedByEmbedding(file);
-		let text = await this.vault.cachedRead(file);
-		text = await mainConverting(text, file, frontmatter, linkedFiles, multiProperties);
-		const path = multiProperties.filepath;
-		const props = Array.isArray(repo.frontmatter) ? repo.frontmatter : [repo.frontmatter];
+		const {
+			text,
+			path,
+			props,
+			embedFiles,
+			general: frontmatterSettings,
+			multiProperties,
+		} = prepared;
 		let multiRepMsg = "";
 		for (const prop of props) {
 			multiRepMsg += `[${prop.owner}/${prop.repo}/${prop.branch}] `;
@@ -451,18 +478,10 @@ export default class Publisher {
 	 */
 
 	async uploadImage(imageFile: TFile, properties: MonoProperties) {
-		let imageBin: ArrayBuffer = await this.vault.readBinary(imageFile);
+		const bytes = await prepareAttachment(imageFile, this.plugin);
+		const imageBin = bytes.buffer;
+		const image64 = Base64.fromUint8Array(bytes);
 		const prop = properties.frontmatter.prop;
-		let image64 = arrayBufferToBase64(imageBin);
-		if (imageFile.name.includes("excalidraw")) {
-			const svg = await convertToHTMLSVG(imageFile, this.plugin.app);
-			if (svg) {
-				//convert to base64
-				image64 = Base64.encode(svg).toString();
-				//@ts-ignore
-				imageBin = Buffer.from(image64, "base64");
-			}
-		}
 		const path = getImagePath(
 			imageFile,
 			this.plugin,

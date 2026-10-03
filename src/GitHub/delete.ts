@@ -255,10 +255,11 @@ function parseYamlFrontmatter(contents: string, filePath: string): unknown {
  * @return {Promise<boolean>} true if the file must be deleted
  */
 
-async function checkIndexFiles(
+export async function checkIndexFiles(
 	octokit: Octokit,
 	path: string,
-	prop: Properties
+	prop: Properties,
+	ref?: string
 ): Promise<boolean> {
 	const fileRequest = await octokit.request(
 		"GET /repos/{owner}/{repo}/contents/{+path}",
@@ -266,6 +267,7 @@ async function checkIndexFiles(
 			owner: prop.owner,
 			repo: prop.repo,
 			path,
+			...(ref ? { ref } : {}),
 		}
 	);
 	if (fileRequest.status === 200) {

@@ -1,4 +1,5 @@
 import { moment } from "obsidian";
+import { withDirectMessages } from "./direct_publish";
 
 /** ---- IMPORT TRANSLATIONS ---- */
 import de from "./locales/de.json";
@@ -19,7 +20,7 @@ export const resources = {
 		translation: de,
 	},
 	en: {
-		translation: en,
+		translation: withDirectMessages(en, "en"),
 	},
 	es: {
 		translation: es,
@@ -40,10 +41,10 @@ export const resources = {
 		translation: tr,
 	},
 	zhCN: {
-		translation: zhCN,
+		translation: withDirectMessages(zhCN, "zhCN"),
 	},
 	zhTW: {
-		translation: zhTW,
+		translation: withDirectMessages(zhTW, "zhTW"),
 	},
 } as const;
 /** ---- RESOURCE OBJECT ---- */

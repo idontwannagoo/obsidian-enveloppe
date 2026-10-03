@@ -98,6 +98,8 @@ export interface GitHub {
 	 * If the PR should be automatically merged
 	 */
 	automaticallyMergePR: boolean;
+	/** 直接向目标分支批量提交，默认关闭。 */
+	directPublish?: boolean;
 	/**
 	 * Don't push the changes to the repository, or make any action on the repository
 	 * It will use a local folder instead to mimic the behavior of the plugin

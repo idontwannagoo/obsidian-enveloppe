@@ -2,6 +2,8 @@
 
 # ✉️ Enveloppe : An Obsidian GitHub Vault Publisher
 
+本 fork 新增 [SHA 批量直接发布](DIRECT_PUBLISH.md)：一次检查内容，一次提交变化。默认关闭，可保留原有 PR 发布方式。
+
 Publish your notes in your own GitHub repository for free and do whatever you want with them. ✨
 
 This allows you to set up any template: Jekyll, Mkdocs, Hugo, or custom-made ones!
