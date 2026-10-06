@@ -26,13 +26,6 @@ export const renderUploadConfiguration = (ctx: RenderContext) => {
 				.setValue(uploadSettings.behavior)
 				.onChange(async (value: string) => {
 					uploadSettings.behavior = value as FolderSettings;
-					await folderHideShowSettings(
-						frontmatterKeySettings,
-						rootFolderSettings,
-						autoCleanSetting,
-						value,
-						ctx.plugin
-					);
 					await ctx.plugin.saveSettings();
 					await ctx.renderSettingsPage(ESettingsTabId.Upload);
 				});

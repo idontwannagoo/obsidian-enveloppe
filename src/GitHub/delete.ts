@@ -202,6 +202,10 @@ export async function filterGithubFile(
 	prop: Properties
 ): Promise<GithubRepo[]> {
 	const sharedFilesInRepo: GithubRepo[] = [];
+	const isInDirectory = (file: string, directory: string): boolean => {
+		const folder = normalizePath(directory.trim()).replace(/^\/+|\/+$/g, "");
+		return folder.length > 0 && file.startsWith(`${folder}/`);
+	};
 	for (const file of fileInRepo) {
 		const behavior = prop.path?.type ?? settings.upload.behavior;
 		const root = prop.path?.rootFolder ?? settings.upload.rootFolder;
@@ -211,9 +215,9 @@ export async function filterGithubFile(
 			settings.upload.autoclean.includeAttachments &&
 			isAttachment(file.file, settings.embed.unHandledObsidianExt);
 		if (
-			(file.file.includes(defaultName) ||
-				(behavior === FolderSettings.Yaml && file.file.includes(root)) ||
-				(attachmentFolder.length > 0 && file.file.includes(attachmentFolder))) &&
+			(isInDirectory(file.file, defaultName) ||
+				(behavior === FolderSettings.Yaml && isInDirectory(file.file, root)) ||
+				isInDirectory(file.file, attachmentFolder)) &&
 			!excludedFileFromDelete(file.file, settings) &&
 			(enabledAttachments || file.file.match("md$"))
 		) {

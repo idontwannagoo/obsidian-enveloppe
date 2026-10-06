@@ -9,11 +9,7 @@ import type { EnveloppeSettingsTab } from "src/settings";
  */
 
 export function showSettings(containerEl: Setting) {
-	for (const [type, elem] of Object.entries(containerEl)) {
-		if (type != "components") {
-			elem.show();
-		}
-	}
+	containerEl.settingEl.style.display = "";
 }
 
 /**
@@ -22,11 +18,7 @@ export function showSettings(containerEl: Setting) {
  */
 
 export function hideSettings(containerEl: Setting) {
-	for (const [type, elem] of Object.entries(containerEl)) {
-		if (type != "components") {
-			elem.hide();
-		}
-	}
+	containerEl.settingEl.style.display = "none";
 }
 
 export function showHideBasedOnFolder(

@@ -129,6 +129,7 @@ export class FakeSetting {
 	static items: FakeSetting[] = [];
 	name = "";
 	control?: FakeControl;
+	components: FakeControl[] = [];
 	settingEl = new FakeElement();
 	constructor(_container: any) {
 		FakeSetting.items.push(this);
@@ -151,6 +152,7 @@ export class FakeSetting {
 	}
 	addToggle(callback: (control: FakeControl) => void) {
 		this.control = new FakeControl();
+		this.components.push(this.control);
 		callback(this.control);
 		return this;
 	}
