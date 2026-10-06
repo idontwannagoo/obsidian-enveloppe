@@ -72,6 +72,8 @@ export const DEFAULT_SETTINGS: Partial<EnveloppeSettings> = {
 			fields: [],
 		},
 		links: {
+			autoAbbrlink: false,
+			webTemplate: "",
 			internal: false,
 			unshared: false,
 			wiki: false,

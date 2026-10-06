@@ -12,6 +12,7 @@ import {
 	textIsInFrontmatter,
 } from "src/conversion/file_path";
 import { replaceText } from "src/conversion/find_and_replace_text";
+import { articleWebLink } from "src/conversion/article_links";
 import { isAttachment, noTextConversion } from "src/utils/data_validation_test";
 import type Enveloppe from "../main";
 
@@ -383,6 +384,43 @@ export async function convertToInternalGithub(
 		);
 		const matchedLink = fileContent.match(regexToReplace);
 		if (matchedLink) {
+			const webRegex = new RegExp(
+				`(?<!!)(?:\\[\\[${escapedLinkedFile}(?:\\\\?\\|.*?)?\\]\\]|\\[[^\\]\\r\\n]*\\]\\((?:${escapedLinkedFile}|${linkInMarkdown})\\))`,
+				"g"
+			);
+			const active =
+				Boolean(settings.conversion.links.webTemplate?.trim()) &&
+				linkedFile.type === "link" &&
+				replaceText(
+					fileContent,
+					webRegex,
+					"__enveloppe_article_link__",
+					properties.plugin,
+					true
+				) !== fileContent;
+			const webUrl = active ? await articleWebLink(linkedFile, properties) : null;
+			if (webUrl) {
+				const url =
+					webUrl +
+					(linkedFile.anchor
+						? `#${slugifyAnchor(linkedFile.anchor.replace(/^#/, ""), settings, true)}`
+						: "");
+				for (const match of fileContent.match(webRegex) ?? []) {
+					const alias = match.startsWith("[[")
+						? match.slice(2, -2).split(/\\?\|/).slice(1).join("|") ||
+							linkedFile.altText ||
+							linkedFile.linked.basename
+						: (match.match(/^\[(.*?)\]/)?.[1] ?? linkedFile.linked.basename);
+					fileContent = replaceText(
+						fileContent,
+						new RegExp(`(?<!!)${escapeRegex(match)}`, "g"),
+						`[${alias}](${url})`,
+						properties.plugin,
+						true
+					);
+				}
+				continue;
+			}
 			for (const link of matchedLink) {
 				if (frontmatterSettings.unlink && paths.unshared) {
 					fileContent = replaceText(

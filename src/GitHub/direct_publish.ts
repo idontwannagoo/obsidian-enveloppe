@@ -2,6 +2,7 @@ import type { Properties, Repository } from "@interfaces";
 import i18next from "i18next";
 import { type FrontMatterCache, Notice, Platform, type TFile } from "obsidian";
 import { prepareAttachment } from "src/conversion/attachment";
+import { ensureAbbrlink } from "src/conversion/article_links";
 import { getImagePath, getReceiptFolder } from "src/conversion/file_path";
 import type Enveloppe from "src/main";
 import { ListChangedFiles } from "src/settings/modals/list_changed";
@@ -138,6 +139,19 @@ export async function publishDirectFiles(
 	};
 
 	try {
+		// 同批次先固定所有已选文章的编号，A 可以引用随后才转换的 B。
+		for (const file of files) {
+			if (
+				isShared(
+					frontmatterFromFile(file, plugin, repository),
+					plugin.settings,
+					file,
+					repository
+				)
+			) {
+				await ensureAbbrlink(file, plugin);
+			}
+		}
 		for (const file of files) {
 			await collect(file);
 			status.increment();

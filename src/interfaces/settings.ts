@@ -200,6 +200,10 @@ export interface Conversion {
 	};
 	/** Settings for the links */
 	links: {
+		/** 首次发布时将 Hexo 编号保存到本地文章。 */
+		autoAbbrlink?: boolean;
+		/** 网页路径模板；空值保留仓库文件链接。 */
+		webTemplate?: string;
 		/** Convert internal links to their proper path into Obsidian */
 		internal: boolean;
 		/** Also convert the internal path for unshared files */

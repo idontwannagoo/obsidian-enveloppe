@@ -21,6 +21,7 @@ export function fixture() {
 	const binary = new Map<string, Uint8Array>();
 	const caches = new Map<string, any>();
 	const errors: Error[] = [];
+	const writes: string[] = [];
 	const folder = new FakeTFolder("00-Blog-Publish");
 	const vault = {
 		getName: () => "测试笔记库",
@@ -28,6 +29,7 @@ export function fixture() {
 		getMarkdownFiles: () => [...files.values()].filter((file) => file.extension === "md"),
 		getAbstractFileByPath: (path: string) => files.get(path),
 		cachedRead: async (file: FakeTFile) => text.get(file.path) ?? "",
+		read: async (file: FakeTFile) => text.get(file.path) ?? "",
 		readBinary: async (file: FakeTFile) => binary.get(file.path)!.slice().buffer,
 		adapter: {
 			read: async (path: string) => text.get(path) ?? "",
@@ -36,6 +38,29 @@ export function fixture() {
 	};
 	const app = {
 		vault,
+		fileManager: {
+			processFrontMatter: async (
+				file: FakeTFile,
+				callback: (frontmatter: Record<string, any>) => void
+			) => {
+				const raw = text.get(file.path)!;
+				const match = /^---\n([\s\S]*?)\n---\n/.exec(raw);
+				const frontmatter = (match ? Bun.YAML.parse(match[1]) : {}) as Record<
+					string,
+					any
+				>;
+				callback(frontmatter);
+				text.set(
+					file.path,
+					"---\n" +
+						Bun.YAML.stringify(frontmatter) +
+						"\n---\n" +
+						raw.slice(match?.[0].length ?? 0)
+				);
+				writes.push(file.path);
+				// 故意不刷新 metadataCache，模拟实际 Obsidian 的异步刷新。
+			},
+		},
 		metadataCache: {
 			getCache: (path: string) => caches.get(path),
 			getFileCache: (file: FakeTFile) => caches.get(file.path),
@@ -112,5 +137,6 @@ export function fixture() {
 		app,
 		folder,
 		errors,
+		writes,
 	};
 }

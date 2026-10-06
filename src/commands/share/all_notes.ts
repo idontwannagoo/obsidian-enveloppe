@@ -9,6 +9,7 @@ import {
 	setIcon,
 } from "obsidian";
 import type { GithubBranch } from "src/GitHub/branch";
+import { ensureAbbrlink } from "src/conversion/article_links";
 import { deleteFromGithub } from "src/GitHub/delete";
 import { publishDirectFiles, useDirectPublish } from "src/GitHub/direct_publish";
 import type Enveloppe from "src/main";
@@ -117,6 +118,7 @@ export async function shareAllMarkedNotes(
 		const fileError: string[] = [];
 		const listStateUploaded: UploadedFiles[] = [];
 		if (sharedFiles.length > 0) {
+			for (const file of sharedFiles) await ensureAbbrlink(file, plugin);
 			if (createGithubBranch) {
 				const isValid = await checkRepositoryValidityWithProperties(
 					PublisherManager,

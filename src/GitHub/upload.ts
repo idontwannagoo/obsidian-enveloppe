@@ -23,6 +23,7 @@ import {
 	type Vault,
 } from "obsidian";
 import { mainConverting } from "src/conversion";
+import { ensureAbbrlink } from "src/conversion/article_links";
 import { prepareAttachment } from "src/conversion/attachment";
 import { getImagePath, getReceiptFolder } from "src/conversion/file_path";
 import { deleteFromGithub } from "src/GitHub/delete";
@@ -166,11 +167,13 @@ export default class Publisher {
 		target?: Properties
 	) {
 		const shareFiles = new FilesManagement(this.octokit, this.plugin);
-		const frontmatter = mergeFrontmatter(
+		const article = await ensureAbbrlink(file, this.plugin);
+		let frontmatter = mergeFrontmatter(
 			frontmatterFromFile(file, this.plugin, null),
 			sourceFrontmatter,
 			this.settings.plugin.shareKey
 		);
+		if (article) frontmatter = { ...frontmatter, ...article.frontmatter };
 		const prop = target ?? getProperties(this.plugin, repo.repository, frontmatter);
 		// 直提路径已经加载对应仓库的认证信息，网络请求会直接报告认证错误。
 		const isNotEmpty = target
@@ -206,7 +209,7 @@ export default class Publisher {
 		let embedFiles = shareFiles.getSharedEmbed(file, frontmatterSettings);
 		embedFiles = await shareFiles.getMetadataLinks(file, embedFiles, frontmatterSettings);
 		const linkedFiles = shareFiles.getLinkedByEmbedding(file);
-		let text = await this.vault.cachedRead(file);
+		let text = article?.text ?? (await this.vault.cachedRead(file));
 		text = await mainConverting(text, file, frontmatter, linkedFiles, multiProperties);
 		const path = multiProperties.filepath;
 		const props = Array.isArray(prop) ? prop : [prop];

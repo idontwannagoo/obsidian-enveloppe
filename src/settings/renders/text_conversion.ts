@@ -8,7 +8,9 @@ export const renderTextConversion = (ctx: RenderContext) => {
 	const textSettings = ctx.settings.conversion;
 
 	ctx.settingsPage.appendChild(
-		sanitizeHTMLToDom(`<p>${i18next.t("settings.conversion.desc")}</p>`)
+		sanitizeHTMLToDom(
+			`<p>${i18next.t(textSettings.links.autoAbbrlink ? "articleLinks.contentDesc" : "settings.conversion.desc")}</p>`
+		)
 	);
 
 	ctx.settingsPage.createEl("h5", {
@@ -41,7 +43,31 @@ export const renderTextConversion = (ctx: RenderContext) => {
 			});
 		});
 
+	new Setting(ctx.settingsPage)
+		.setName(i18next.t("articleLinks.autoTitle"))
+		.setDesc(i18next.t("articleLinks.autoDesc"))
+		.addToggle((toggle) => {
+			toggle
+				.setValue(textSettings.links.autoAbbrlink ?? false)
+				.onChange(async (value) => {
+					textSettings.links.autoAbbrlink = value;
+					await ctx.plugin.saveSettings();
+					await ctx.renderSettingsPage("text-conversion");
+				});
+		});
 	if (textSettings.links.internal) {
+		new Setting(ctx.settingsPage)
+			.setName(i18next.t("articleLinks.templateTitle"))
+			.setDesc(i18next.t("articleLinks.templateDesc"))
+			.addText((text) => {
+				text
+					.setPlaceholder("/posts/{abbrlink}/")
+					.setValue(textSettings.links.webTemplate ?? "")
+					.onChange(async (value) => {
+						textSettings.links.webTemplate = value.trim();
+						await ctx.plugin.saveSettings();
+					});
+			});
 		if (!ctx.settings.plugin.shareAll?.enable) {
 			new Setting(ctx.settingsPage)
 				.setName(i18next.t("settings.conversion.links.nonShared.title"))

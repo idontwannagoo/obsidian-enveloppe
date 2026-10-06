@@ -254,6 +254,8 @@ mock.module("obsidian", () => ({
 		return {
 			exists: Boolean(match),
 			frontmatter: match?.[1] ?? "",
+			from: match ? text.indexOf("\n") + 1 : 0,
+			to: match ? text.indexOf("\n") + 1 + match[1].length : 0,
 			contentStart: match?.[0].length ?? 0,
 		};
 	},
